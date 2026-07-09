@@ -1,5 +1,7 @@
 "use client";
 
+
+
 import { useRef, useState, useEffect } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -11,6 +13,15 @@ const BACKGROUND_IMAGES = [
   "/images/image1.jpeg",
   "/images/image2.jpeg"
 ];
+
+
+
+
+
+
+
+
+
 
 
 const CORE_AXES = [
@@ -49,146 +60,75 @@ return ()=>clearInterval(timer);
 
 
 
-useGSAP(()=>{
+useGSAP(
+() => {
+
+const slides = gsap.utils.toArray<HTMLElement>(".bg-slide");
 
 
-const tl = gsap.timeline({
-defaults:{
-ease:"power4.out"
-}
+slides.forEach((slide,index)=>{
+
+gsap.set(slide,{
+opacity:index === currentSlide ? 0.35 : 0,
+scale:index === currentSlide ? 1.12 : 1
 });
 
-
-
-tl.from(".hero-light",{
-opacity:0,
-scale:.5,
-duration:1.5
-})
-
-.from(".hero-eyebrow",{
-opacity:0,
-y:30,
-duration:.7
-})
-
-
-.from(".hero-title span",{
-opacity:0,
-y:40,
-stagger:.15,
-duration:.8
-},"-=.4")
-
-
-.from(".hero-subtitle",{
-opacity:0,
-y:30,
-duration:.8
-},"-=.5")
-
-
-.from(".hero-cta-group",{
-opacity:0,
-y:20,
-duration:.6
-},"-=.4")
-
-
-.from(".hero-badge",{
-opacity:0,
-scale:.8,
-y:20,
-stagger:.1,
-duration:.5
-},"-=.3")
-
-
-
-gsap.to(".floating-item",{
-
-y:-15,
-duration:3,
-
-repeat:-1,
-
-yoyo:true,
-
-ease:"sine.inOut",
-
-stagger:.5
 
 });
 
 
+const activeSlide = slides[currentSlide];
 
 
-
-const slides =
-gsap.utils.toArray(".bg-slide");
-
-
-
-slides.forEach((slide:any,index)=>{
-
-
-if(index===currentSlide){
-
-
-gsap.to(slide,{
-opacity:.35,
-duration:1.5
-});
-
-
-gsap.fromTo(
-slide,
-{
-scale:1
-},
-{
+gsap.to(activeSlide,{
+opacity:0.35,
 scale:1.12,
 duration:8,
 ease:"none"
-}
-);
+});
 
 
+slides.forEach((slide,index)=>{
 
-}else{
-
+if(index !== currentSlide){
 
 gsap.to(slide,{
 opacity:0,
 duration:1.5
-})
-
+});
 
 }
 
+else{
 
-})
+gsap.to(slide,{
+opacity:0.35,
+duration:1.5
+});
 
+}
+
+});
 
 
 },
 {
 scope:containerRef,
 dependencies:[currentSlide]
-});
-
-
+}
+);
 return (
 
 <section
-  ref={containerRef}
-  className="
-    relative
-    min-h-screen
-    pt-36
-    lg:pt-24
-    overflow-hidden
-    bg-primary-dark
+ref={containerRef}
+className="
+relative 
+min-h-screen
+overflow-hidden
+flex
+pt-18
+items-center
+bg-[#07111f]
 "
 >
 
@@ -210,6 +150,7 @@ inset-0
 bg-cover
 bg-center
 opacity-0
+will-change-transform
 "
 style={{
 backgroundImage:`url(${image})`
@@ -794,7 +735,13 @@ index===currentSlide
 ))
 }
 
+
+
 </div>
+
+
+
+
 
 </section>
 
