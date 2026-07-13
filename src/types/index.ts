@@ -68,7 +68,7 @@ export interface RegistrationDoc {
   telephone: string;
   nombrePlaces: number;
   montantTotal: number;
-  statutPaiement: PaymentStatus;
+ statutPaiement: "en-attente" | "gratuit" | "annule" | "paye" | "success";
   referenceTransaction?: string; // référence KKiaPay
   dateInscription: Timestamp;
   notesAdmin?: string;
