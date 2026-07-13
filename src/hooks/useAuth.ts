@@ -27,7 +27,7 @@ export function useAuth(): AuthState {
       const tokenResult = await user.getIdTokenResult();
       const role = (tokenResult.claims.role as UserRole | undefined) ?? null;
       setState({ user, role, loading: false });
-    });
+    }) ;
 
     return () => unsubscribe();
   }, []);
