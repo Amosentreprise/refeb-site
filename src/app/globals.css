@@ -1,45 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  /* Couleurs Officielles REFEB ajustées d'après le logo */
-  --color-primary: #002D62;        /* Le vrai Bleu Impérial Académique du texte REFEB */
-  --color-primary-dark: #001A3B;   /* Version sombre pour les grands fonds */
-  --color-primary-light: #1A477C;  /* Version claire pour les contrastes */
-  
-  --color-accent: #C5A059;         /* Le véritable Or Sacré / Bronze des lauriers */
-  --color-accent-dark: #9E7E43;    /* Or sombre pour les textes lisibles */
-  
-  /* Fonds chauds et texturés inspirés de la charte */
-  --color-bg: #FCFBF7;             /* Un blanc crème très élégant qui rappelle le papier d'un livre */
-  --color-bg-alt: #F3EFE4;         /* Version légèrement plus dense pour les sections alternées */
-  
-  --color-ink: #0B1520;            /* Noir bleuté très haut de gamme pour le texte */
-  --color-muted: #5A6573;          /* Gris bleuté pour les textes secondaires */
+  /* Tes couleurs actives */
+  --color-primary: #002D62;
+  --color-primary-dark: #001A3B;
+  --color-primary-light: #1A477C;
+  --color-accent: #C5A059;
+  --color-accent-dark: #9E7E43;
+  --color-bg: #FCFBF7;
+  --color-bg-alt: #F3EFE4;
+  --color-ink: #0B1520;
+  --color-muted: #5A6573;
   --color-white: #FFFFFF;
 
-  /* Polices de caractères */
-  --font-display: var(--font-fraunces); /* Reste magnifique pour l'aspect littéraire/académique */
+  --font-display: var(--font-fraunces);
   --font-body: var(--font-inter);
 }
 
-@theme inline {
-  --color-primary: var(--color-primary);
-  --color-primary-dark: var(--color-primary-dark);
-  --color-primary-light: var(--color-primary-light);
-  --color-accent: var(--color-accent);
-  --color-accent-dark: var(--color-accent-dark);
-  --color-bg: var(--color-bg);
-  --color-bg-alt: var(--color-bg-alt);
-  --color-ink: var(--color-ink);
-  --color-muted: var(--color-muted);
-
-  --font-display: var(--font-display);
-  --font-body: var(--font-body);
-}
-
-* {
-  scroll-behavior: smooth;
-}
+* { scroll-behavior: smooth; }
 
 body {
   background: var(--color-bg);
@@ -47,249 +25,45 @@ body {
   font-family: var(--font-body), sans-serif;
 }
 
-h1, h2, h3, h4, .font-display {
-  font-family: var(--font-display), serif;
+h1, h2, h3, h4, .font-display { font-family: var(--font-display), serif; }
+
+/* --- UTILITAIRES & ANIMATIONS --- */
+
+@layer utilities {
+  /* Animation de respiration pour le Hero */
+  .hero-light { animation: heroGlow 8s infinite alternate ease-in-out; }
+  
+  @keyframes heroGlow {
+    from { transform: translate(0,0) scale(1); opacity: .15; }
+    to { transform: translate(40px,-30px) scale(1.2); opacity: .30; }
+  }
+
+  /* Effet premium sur les boutons */
+  .hero-cta-group a { position: relative; overflow: hidden; }
+  .hero-cta-group a::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,.25), transparent);
+    transform: translateX(-120%); transition: .8s;
+  }
+  .hero-cta-group a:hover::before { transform: translateX(120%); }
+
+  /* Animation header */
+  .animate-header-glow { animation: headerGlow 5s linear infinite; filter: blur(12px); }
+  @keyframes headerGlow { 0% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
 }
 
-:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+/* --- OPTIMISATION MOBILE --- */
+@media (max-width: 768px) {
+  .hero-title { font-size: 3rem; line-height: 1.15; }
+  .hero-subtitle { font-size: 1rem; }
+  
+  /* Force le contenu à ne pas dépasser la largeur de l'écran */
+  html, body { overflow-x: hidden; width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
   }
-}
-@layer utilities {
-
-
-/* Animation douce de respiration */
-
-.hero-light{
-
-animation:heroGlow 8s infinite alternate ease-in-out;
-
-}
-
-
-
-@keyframes heroGlow{
-
-from{
-
-transform:translate(0,0) scale(1);
-
-opacity:.15;
-
-}
-
-
-to{
-
-transform:translate(40px,-30px) scale(1.2);
-
-opacity:.30;
-
-}
-
-}
-
-
-
-
-
-/* Apparition plus élégante */
-
-.hero-title span{
-
-will-change:transform,opacity;
-
-}
-
-
-
-
-
-/* Effet premium sur les boutons */
-
-.hero-cta-group a{
-
-position:relative;
-
-overflow:hidden;
-
-}
-
-
-
-.hero-cta-group a::before{
-
-
-content:"";
-
-position:absolute;
-
-inset:0;
-
-background:
-linear-gradient(
-120deg,
-transparent,
-rgba(255,255,255,.25),
-transparent
-);
-
-
-transform:translateX(-120%);
-
-
-transition:.8s;
-
-
-}
-
-
-
-.hero-cta-group a:hover::before{
-
-transform:translateX(120%);
-
-}
-
-
-
-
-
-
-/* Badge hover */
-
-.hero-badge{
-
-transition:
-transform .3s ease,
-border-color .3s ease,
-background .3s ease;
-
-}
-
-
-
-.hero-badge:hover{
-
-transform:translateY(-5px);
-
-border-color:
-rgba(250,204,21,.5);
-
-
-background:
-rgba(255,255,255,.1);
-
-}
-
-
-
-
-
-/* Timeline */
-
-.hero-title{
-
-text-wrap:balance;
-
-}
-
-
-
-
-
-}
-
-
-
-
-
-/* Mobile optimisation */
-
-@media(max-width:768px){
-
-
-.hero-title{
-
-font-size:3rem;
-
-line-height:1.15;
-
-}
-
-
-
-.hero-subtitle{
-
-font-size:1rem;
-
-}
-
-
-
-.hero-badge{
-
-width:100%;
-
-justify-content:center;
-
-}
-
-
-
-}
-@keyframes headerGlow {
-
-0%{
-transform:translateX(-120%);
-}
-
-100%{
-transform:translateX(120%);
-}
-
-}
-
-
-.animate-header-glow{
-
-animation:
-headerGlow 5s linear infinite;
-
-filter:
-blur(12px);
-
-}
-@keyframes headerFloat {
-
-0%,100%{
-
-transform:translateY(0);
-
-}
-
-
-50%{
-
-transform:translateY(-3px);
-
-}
-
-}
-
-
-.animate-header-float{
-
-animation:
-headerFloat 5s ease-in-out infinite;
-
 }
