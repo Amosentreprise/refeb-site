@@ -1,12 +1,17 @@
-"use client";
+
 
 import { Newspaper, Sparkles } from "lucide-react";
 import { Header } from "../components/layout/Header";
 import { Footer } from "../components/layout/Footer";
 import { ArticleCard } from "../components/actualites/ArticleCard";
-import { demoArticles } from "@/lib/demo-data";
 
-export default function ActualitesPage() {
+import { getPublishedArticles } from "@/lib/firebase/articles";
+
+export const dynamic = "force-dynamic";
+
+export default async function ActualitesPage() {
+  const articles = await getPublishedArticles();
+
   return (
     <>
       <Header />
@@ -47,21 +52,27 @@ export default function ActualitesPage() {
                 <p className="text-muted text-sm mt-1">Découvrez les derniers événements et ressources partagés par le REFEB.</p>
               </div>
               <div className="mt-4 md:mt-0 text-xs font-bold text-accent-dark bg-accent/10 border border-accent/20 px-4 py-2 rounded-full">
-                {demoArticles.length} articles disponibles
+                {articles.length} article{articles.length > 1 ? "s" : ""} disponible{articles.length > 1 ? "s" : ""}
               </div>
             </div>
 
             {/* GRILLE D'ARTICLES ÉPURÉE */}
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {demoArticles.map((article) => (
-                <div 
-                  key={article.id} 
-                  className="transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-primary/5 rounded-2xl overflow-hidden"
-                >
-                  <ArticleCard article={article} />
-                </div>
-              ))}
-            </div>
+            {articles.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-muted/30 bg-white p-10 text-center text-muted">
+                Aucune actualité publiée pour le moment.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                {articles.map((article) => (
+                  <div 
+                    key={article.id} 
+                    className="transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-primary/5 rounded-2xl overflow-hidden"
+                  >
+                    <ArticleCard article={article} />
+                  </div>
+                ))}
+              </div>
+            )}
 
           </div>
         </section>
