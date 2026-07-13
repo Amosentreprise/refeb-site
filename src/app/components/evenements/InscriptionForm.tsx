@@ -22,7 +22,7 @@ const schema = z.object({
   nombrePlaces: z.coerce.number().min(1, "Minimum 1 place").max(10, "Maximum 10 places"),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.input<typeof schema>;
 
 interface InscriptionFormProps {
   event: {
@@ -38,8 +38,8 @@ export function InscriptionForm({ event }: InscriptionFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+ const { register, handleSubmit, watch, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(schema) as never,
     defaultValues: { nombrePlaces: 1 },
   });
 
