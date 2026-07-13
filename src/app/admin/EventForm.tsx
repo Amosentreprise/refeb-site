@@ -6,8 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Calendar, MapPin, Tag, Layers, Coins, Users, Loader2, FileText, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/Input"; // Remplace par tes inputs si nécessaire
-import { Button } from "@/components/ui/Button";
+import { Input } from "../components/ui/Input"; // Remplace par tes inputs si nécessaire
+import { Button } from "../components/ui/Button";
 
 // Schéma de validation dynamique Zod
 const schema = z.object({
