@@ -9,7 +9,23 @@ import { cn } from "@/lib/utils";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
 
-// Schéma de validation dynamique Zod avec superRefine (Stable & Sans dépréciations)
+// 1. Interface de documentation (forme finale envoyée à onSubmit après transformation)
+interface EventFormValues {
+  titre: string;
+  slug: string;
+  descriptionCourte: string;
+  categorie: string;
+  lieu: string;
+  dateDebut: string;
+  statut: "a-venir" | "en-cours" | "passe";
+  isPayant: boolean;
+  prix?: number;
+  isIllimite: boolean;
+  placesTotal?: number;
+}
+
+// 2. Schéma Zod — le type du formulaire est dérivé DU schema lui-même (voir FormValues ci-dessous),
+// jamais forcé manuellement, sinon incompatibilité avec z.coerce.number() (unknown vs number)
 const schema = z.object({
   titre: z.string().min(3, "Le titre doit faire au moins 3 caractères"),
   slug: z.string().min(3, "Le slug est requis"),
@@ -23,7 +39,6 @@ const schema = z.object({
   isIllimite: z.boolean(),
   placesTotal: z.coerce.number().optional(),
 }).superRefine((data, ctx) => {
-  // Validation conditionnelle pour le prix
   if (data.isPayant && (!data.prix || data.prix <= 0)) {
     ctx.addIssue({
       code: "custom",
@@ -32,7 +47,6 @@ const schema = z.object({
     });
   }
   
-  // Validation conditionnelle pour le nombre de places
   if (!data.isIllimite && (!data.placesTotal || data.placesTotal <= 0)) {
     ctx.addIssue({
       code: "custom",
@@ -42,7 +56,8 @@ const schema = z.object({
   }
 });
 
-type EventFormValues = z.infer<typeof schema>;
+// 3. Type du formulaire dérivé du schema — c'est LA correction clé
+type FormValues = z.input<typeof schema>;
 
 interface EventFormProps {
   initialData?: any;
@@ -52,15 +67,14 @@ interface EventFormProps {
 export function EventForm({ initialData, onSubmit }: EventFormProps) {
   const [loading, setLoading] = useState(false);
 
-  // Tout est correctement destructuré ici, y compris handleSubmit !
   const {
     register,
     handleSubmit,
     watch,
     setValue,
     formState: { errors },
-  } = useForm<EventFormValues>({
-    resolver: zodResolver(schema),
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema) as never,
     defaultValues: initialData || {
       titre: "",
       slug: "",
@@ -76,11 +90,11 @@ export function EventForm({ initialData, onSubmit }: EventFormProps) {
     },
   });
 
-  // Observation des états réactifs des toggles
   const isPayant = watch("isPayant");
   const isIllimite = watch("isIllimite");
 
-  const handleFormSubmit = async (values: EventFormValues) => {
+  // 4. Le paramètre reprend maintenant FormValues (dérivé du schema), pas EventFormValues
+  const handleFormSubmit = async (values: FormValues) => {
     setLoading(true);
     try {
       const finalData = {
@@ -111,7 +125,7 @@ export function EventForm({ initialData, onSubmit }: EventFormProps) {
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <Input
             label="Titre de l'événement"
-            placeholder="Ex: Séminaire National de Cybersécurité"
+            placeholder="Ex: Séminaire National de "
             {...register("titre")}
             error={errors.titre?.message}
           />
@@ -262,7 +276,7 @@ export function EventForm({ initialData, onSubmit }: EventFormProps) {
         )}
       </div>
 
-      {/* BOUTON DE TRANSMISSION */}
+      {/* FOOTER ACTION */}
       <div className="pt-4 border-t border-slate-100 flex justify-end">
         <Button
           type="submit"
