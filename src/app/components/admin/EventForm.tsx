@@ -15,6 +15,18 @@ import { useAuth } from "@/hooks/useAuth";
 import { EVENT_CATEGORIES, type EventDoc } from "@/types";
 
 
+/**
+ * Version "sérialisée" d'un événement, telle que reçue depuis un Server
+ * Component (dates en chaîne ISO plutôt qu'en instances Timestamp, qui ne
+ * peuvent pas traverser la frontière Server → Client Component).
+ */
+type SerializedEvent = Omit<EventDoc, "dateDebut" | "dateFin" | "createdAt" | "updatedAt"> & {
+  dateDebut: string;
+  dateFin: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
 const schema = z
   .object({
     titre: z.string().min(3, "Le titre est requis"),
@@ -24,23 +36,29 @@ const schema = z
     lieu: z.string().min(2, "Le lieu est requis"),
     dateDebut: z.string().min(1, "La date de début est requise"),
     dateFin: z.string().min(1, "La date de fin est requise"),
-    prix: z.coerce.number().min(0),
+    estPayant: z.boolean(),
+    prix: z.coerce.number().min(0).optional(),
     placesIllimitees: z.boolean(),
     placesTotal: z.coerce.number().min(1).optional(),
     programme: z.string().optional(),
   })
   .refine(
-    (data) => data.placesIllimitees || (data.placesTotal && data.placesTotal >= 1),
+    (data) => data.placesIllimitees || (data.placesTotal !== undefined && data.placesTotal >= 1),
     {
-      message: "Indique un nombre de places, ou coche \"illimité\".",
+      message: 'Indique un nombre de places, ou coche "illimité".',
       path: ["placesTotal"],
     }
-  );
+  )
+  .refine((data) => !data.estPayant || (data.prix !== undefined && data.prix > 0), {
+    message: "Indique un prix supérieur à 0 pour un événement payant.",
+    path: ["prix"],
+  });
 
 type FormValues = z.input<typeof schema>;
 
 interface Props {
-  existingEvent?: EventDoc;
+  /** Fourni uniquement en mode édition */
+  existingEvent?: SerializedEvent;
 }
 
 export function EventForm({ existingEvent }: Props) {
@@ -65,17 +83,19 @@ export function EventForm({ existingEvent }: Props) {
           descriptionCourte: existingEvent.descriptionCourte,
           description: existingEvent.description,
           lieu: existingEvent.lieu,
-          dateDebut: existingEvent.dateDebut.toDate().toISOString().slice(0, 16),
-          dateFin: existingEvent.dateFin.toDate().toISOString().slice(0, 16),
+          dateDebut: new Date(existingEvent.dateDebut).toISOString().slice(0, 16),
+          dateFin: new Date(existingEvent.dateFin).toISOString().slice(0, 16),
+          estPayant: existingEvent.prix > 0,
           prix: existingEvent.prix,
           placesIllimitees: existingEvent.placesTotal === null,
           placesTotal: existingEvent.placesTotal ?? undefined,
           programme: existingEvent.programme ?? "",
         }
-      : { prix: 0, placesIllimitees: false },
+      : { estPayant: false, prix: 0, placesIllimitees: false },
   });
 
   const placesIllimitees = watch("placesIllimitees");
+  const estPayant = watch("estPayant");
 
   async function onSubmit(values: FormValues) {
     if (!imageUrl) {
@@ -91,13 +111,13 @@ export function EventForm({ existingEvent }: Props) {
     try {
       const payload = {
         titre: values.titre!,
-         categorie: values.categorie!,
+        categorie: values.categorie!,
         descriptionCourte: values.descriptionCourte!,
         description: values.description!,
         lieu: values.lieu!,
         dateDebut: new Date(values.dateDebut!),
         dateFin: new Date(values.dateFin!),
-        prix: Number(values.prix),
+        prix: values.estPayant ? Number(values.prix) : 0,
         placesTotal: values.placesIllimitees ? null : Number(values.placesTotal),
         imageUrl,
         imagePublicId,
@@ -123,47 +143,67 @@ export function EventForm({ existingEvent }: Props) {
     }
   }
 
-  return (
-   <form
-  onSubmit={handleSubmit(onSubmit, (formErrors) => {
-    console.log("Erreurs de validation :", formErrors);
+  function onInvalid(formErrors: Record<string, unknown>) {
+    console.error("Erreurs de validation :", formErrors);
     toast.error("Certains champs sont invalides ou manquants. Vérifie le formulaire.");
-  })}
-  className="grid grid-cols-1 gap-8 lg:grid-cols-3"
->
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit(onSubmit, onInvalid)}
+      className="grid grid-cols-1 gap-8 lg:grid-cols-3"
+    >
       <div className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm lg:col-span-2">
         <Input label="Titre de l'événement" {...register("titre")} error={errors.titre?.message} />
-        <div>
-  <label className="text-sm font-medium text-ink">Type d&apos;événement</label>
-  <select
-    {...register("categorie")}
-    className="mt-1.5 w-full rounded-lg border border-muted/30 bg-white px-4 py-2.5 text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-    defaultValue=""
-  >
-    <option value="" disabled>Choisir un type...</option>
-    {EVENT_CATEGORIES.map((cat) => (
-      <option key={cat} value={cat}>{cat}</option>
-    ))}
-  </select>
-  {errors.categorie && (
-    <p className="mt-1 text-sm text-red-600">{errors.categorie.message}</p>
-  )}
-</div>
 
-        <Textarea label="Description courte (affichée sur les cartes)" {...register("descriptionCourte")} error={errors.descriptionCourte?.message} />
-        <Textarea label="Description complète" rows={6} {...register("description")} error={errors.description?.message} />
+        <div>
+          <label className="text-sm font-medium text-ink">Type d&apos;événement</label>
+          <select
+            {...register("categorie")}
+            className="mt-1.5 w-full rounded-lg border border-muted/30 bg-white px-4 py-2.5 text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            defaultValue=""
+          >
+            <option value="" disabled>
+              Choisir un type...
+            </option>
+            {EVENT_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+          {errors.categorie && (
+            <p className="mt-1 text-sm text-red-600">{errors.categorie.message}</p>
+          )}
+        </div>
+
+        <Textarea
+          label="Description courte (affichée sur les cartes)"
+          {...register("descriptionCourte")}
+          error={errors.descriptionCourte?.message}
+        />
+        <Textarea
+          label="Description complète"
+          rows={6}
+          {...register("description")}
+          error={errors.description?.message}
+        />
         <Textarea label="Programme (optionnel)" rows={4} {...register("programme")} />
       </div>
 
       <div className="flex flex-col gap-4">
+        {/* Image de couverture */}
         <div className="rounded-2xl bg-white p-6 shadow-sm">
-          <label className="text-sm font-medium text-ink">Image de couverture</label>
+          <label className="text-sm font-medium text-ink">Affiche / image de couverture</label>
           {imageUrl ? (
             <div className="relative mt-2">
               <img src={imageUrl} alt="Aperçu" className="h-40 w-full rounded-lg object-cover" />
               <button
                 type="button"
-                onClick={() => { setImageUrl(""); setImagePublicId(""); }}
+                onClick={() => {
+                  setImageUrl("");
+                  setImagePublicId("");
+                }}
                 className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-red-600 hover:bg-white"
               >
                 <Trash2 size={14} />
@@ -193,15 +233,72 @@ export function EventForm({ existingEvent }: Props) {
           )}
         </div>
 
+        {/* Lieu et dates */}
         <div className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm">
           <Input label="Lieu" {...register("lieu")} error={errors.lieu?.message} />
-          <Input label="Date et heure de début" type="datetime-local" {...register("dateDebut")} error={errors.dateDebut?.message} />
-          <Input label="Date et heure de fin" type="datetime-local" {...register("dateFin")} error={errors.dateFin?.message} />
+          <Input
+            label="Date et heure de début"
+            type="datetime-local"
+            {...register("dateDebut")}
+            error={errors.dateDebut?.message}
+          />
+          <Input
+            label="Date et heure de fin"
+            type="datetime-local"
+            {...register("dateFin")}
+            error={errors.dateFin?.message}
+          />
         </div>
 
+        {/* Mode gratuit / payant */}
         <div className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm">
-          <Input label="Prix par place (FCFA, 0 = gratuit)" type="number" min={0} {...register("prix")} error={errors.prix?.message} />
+          <label className="text-sm font-medium text-ink">Mode de participation</label>
+          <div className="flex gap-2">
+            <Controller
+              name="estPayant"
+              control={control}
+              render={({ field }) => (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => field.onChange(false)}
+                    className={`flex-1 rounded-lg border-2 px-4 py-2.5 text-sm font-semibold transition-colors ${
+                      !field.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-muted/20 text-muted"
+                    }`}
+                  >
+                    Gratuit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => field.onChange(true)}
+                    className={`flex-1 rounded-lg border-2 px-4 py-2.5 text-sm font-semibold transition-colors ${
+                      field.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-muted/20 text-muted"
+                    }`}
+                  >
+                    Payant
+                  </button>
+                </>
+              )}
+            />
+          </div>
 
+          {estPayant && (
+            <Input
+              label="Prix par place (FCFA)"
+              type="number"
+              min={1}
+              {...register("prix")}
+              error={errors.prix?.message}
+            />
+          )}
+        </div>
+
+        {/* Places */}
+        <div className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm">
           <label className="flex items-center gap-2 text-sm text-ink">
             <Controller
               name="placesIllimitees"
@@ -212,19 +309,29 @@ export function EventForm({ existingEvent }: Props) {
                   checked={field.value}
                   onChange={(e) => field.onChange(e.target.checked)}
                   className="h-4 w-4 rounded border-muted/30 text-primary focus:ring-primary/30"
-                /> 
+                />
               )}
             />
             Nombre de places illimité
           </label>
 
           {!placesIllimitees && (
-            <Input label="Nombre total de places" type="number" min={1} {...register("placesTotal")} error={errors.placesTotal?.message} />
+            <Input
+              label="Nombre total de places attendues"
+              type="number"
+              min={1}
+              {...register("placesTotal")}
+              error={errors.placesTotal?.message}
+            />
           )}
         </div>
 
         <Button type="submit" variant="accent" size="lg" disabled={submitting} className="w-full">
-          {submitting ? "Enregistrement..." : existingEvent ? "Enregistrer les modifications" : "Créer et publier l'événement"}
+          {submitting
+            ? "Enregistrement..."
+            : existingEvent
+            ? "Enregistrer les modifications"
+            : "Créer et publier l'événement"}
         </Button>
       </div>
     </form>

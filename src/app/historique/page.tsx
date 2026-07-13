@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useMotionValue, useTransform } from "framer-motion";
+import { motion, useMotionValue, useTransform, type Variants } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import {
   ArrowRight,
@@ -173,12 +173,12 @@ const actions = [
   "Animations pédagogiques", "Camps pour apprenants", "Formation certificative", "Cours bibliques"
 ];
 
-const fadeInUp = {
+const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 30 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } },
 };
 
-const staggerContainer = {
+const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
 };

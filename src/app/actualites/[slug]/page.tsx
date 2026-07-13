@@ -3,19 +3,18 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Header } from "../../components/layout/Header";
 import { Footer } from "../../components/layout/Footer";
-import { demoArticles } from "@/lib/demo-data";
+
+import { getArticleBySlug } from "@/lib/firebase/articles";
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateStaticParams() {
-  return demoArticles.map((article) => ({ slug: article.slug }));
-}
+export const dynamic = "force-dynamic";
 
 export default async function ArticleDetailPage({ params }: Props) {
   const { slug } = await params;
-  const article = demoArticles.find((a) => a.slug === slug);
+  const article = await getArticleBySlug(slug);
 
   if (!article) notFound();
 
@@ -42,9 +41,8 @@ export default async function ArticleDetailPage({ params }: Props) {
             </p>
 
             {/*
-              NOTE SÉCURITÉ : contenuHTML doit TOUJOURS être sanitizé (DOMPurify)
-              avant d'être stocké en base ET avant d'être injecté ici, pour
-              éviter toute injection XSS via l'éditeur Tiptap du dashboard admin.
+              Le contenu est sanitizé (DOMPurify) au moment de l'enregistrement
+              dans le dashboard admin, avant d'être stocké dans Firestore.
             */}
             <div
               className="prose prose-neutral mt-8 max-w-none prose-headings:font-display prose-headings:text-primary prose-a:text-primary"

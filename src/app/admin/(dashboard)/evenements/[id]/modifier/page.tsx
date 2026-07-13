@@ -4,6 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { EventForm } from "../../../../../components/admin/EventForm";
 import { getEventByIdAdmin } from "@/lib/firebase/admin-queries";
 
+
+
 interface Props {
   params: Promise<{ id: string }>;
 }
@@ -13,6 +15,17 @@ export default async function ModifierEvenementPage({ params }: Props) {
   const event = await getEventByIdAdmin(id);
 
   if (!event) notFound();
+
+  // Les Timestamp du SDK Admin sont des instances de classe : impossible de
+  // les transmettre telles quelles à un Client Component. On les convertit
+  // en chaînes ISO ; EventForm sait lire ce format pour un événement existant.
+  const eventForClient = {
+    ...event,
+    dateDebut: event.dateDebut.toDate().toISOString(),
+    dateFin: event.dateFin.toDate().toISOString(),
+    createdAt: event.createdAt?.toDate().toISOString() ?? null,
+    updatedAt: event.updatedAt?.toDate().toISOString() ?? null,
+  };
 
   return (
     <div>
@@ -28,7 +41,7 @@ export default async function ModifierEvenementPage({ params }: Props) {
       </h1>
       <p className="mt-1 mb-6 text-sm text-muted">{event.titre}</p>
 
-      <EventForm existingEvent={event} />
+      <EventForm existingEvent={eventForClient} />
     </div>
   );
 }

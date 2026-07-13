@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import type { DemoArticle } from "@/lib/demo-data";
+import type { ArticleDoc } from "@/types";
 
-export function ArticleCard({ article }: { article: DemoArticle }) {
+export function ArticleCard({ article }: { article: ArticleDoc }) {
   return (
     <Link
       href={`/actualites/${article.slug}`}

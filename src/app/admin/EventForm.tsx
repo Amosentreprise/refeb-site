@@ -1,299 +1,341 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+
 import { Calendar, Coins, Users, Loader2, FileText, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Input } from "../components/ui/Input";
-import { Button } from "../components/ui/Button";
 
-// 1. Interface de documentation (forme finale envoyée à onSubmit après transformation)
-interface EventFormValues {
-  titre: string;
-  slug: string;
-  descriptionCourte: string;
-  categorie: string;
-  lieu: string;
+import { useRouter } from "next/navigation";
+import { useForm, Controller } from "react-hook-form";
+import { z } from "zod";
+import { toast } from "sonner";
+import { CldUploadWidget } from "next-cloudinary";
+import { ImagePlus, Trash2 } from "lucide-react";
+import { Input, Textarea } from  "../components/ui/Input";
+import { Button } from  "../components/ui/Button";
+import { createEvent, updateEvent } from "@/lib/firebase/events";
+import { useAuth } from "@/hooks/useAuth";
+import { EVENT_CATEGORIES, type EventDoc } from "@/types";
+
+/**
+ * Version "sérialisée" d'un événement, telle que reçue depuis un Server
+ * Component (dates en chaîne ISO plutôt qu'en instances Timestamp, qui ne
+ * peuvent pas traverser la frontière Server → Client Component).
+ */
+type SerializedEvent = Omit<EventDoc, "dateDebut" | "dateFin" | "createdAt" | "updatedAt"> & {
   dateDebut: string;
-  statut: "a-venir" | "en-cours" | "passe";
-  isPayant: boolean;
-  prix?: number;
-  isIllimite: boolean;
-  placesTotal?: number;
-}
+  dateFin: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
 
-// 2. Schéma Zod — le type du formulaire est dérivé DU schema lui-même (voir FormValues ci-dessous),
-// jamais forcé manuellement, sinon incompatibilité avec z.coerce.number() (unknown vs number)
-const schema = z.object({
-  titre: z.string().min(3, "Le titre doit faire au moins 3 caractères"),
-  slug: z.string().min(3, "Le slug est requis"),
-  descriptionCourte: z.string().min(10, "La description courte est trop brève"),
-  categorie: z.string().min(2, "La catégorie est requise"),
-  lieu: z.string().min(2, "Le lieu est requis"),
-  dateDebut: z.string().min(1, "La date de début est requise"),
-  statut: z.enum(["a-venir", "en-cours", "passe"]),
-  isPayant: z.boolean(),
-  prix: z.coerce.number().optional(),
-  isIllimite: z.boolean(),
-  placesTotal: z.coerce.number().optional(),
-}).superRefine((data, ctx) => {
-  if (data.isPayant && (!data.prix || data.prix <= 0)) {
-    ctx.addIssue({
-      code: "custom",
-      message: "Le montant doit être supérieur à 0 pour un événement payant",
-      path: ["prix"],
-    });
-  }
-  
-  if (!data.isIllimite && (!data.placesTotal || data.placesTotal <= 0)) {
-    ctx.addIssue({
-      code: "custom",
-      message: "Veuillez spécifier un nombre de places supérieur à 0",
+const schema = z
+  .object({
+    titre: z.string().min(3, "Le titre est requis"),
+    categorie: z.enum(EVENT_CATEGORIES, { message: "Choisissez un type d'événement" }),
+    descriptionCourte: z.string().min(10, "La description courte est requise"),
+    description: z.string().min(20, "La description complète est requise"),
+    lieu: z.string().min(2, "Le lieu est requis"),
+    dateDebut: z.string().min(1, "La date de début est requise"),
+    dateFin: z.string().min(1, "La date de fin est requise"),
+    estPayant: z.boolean(),
+    prix: z.coerce.number().min(0).optional(),
+    placesIllimitees: z.boolean(),
+    placesTotal: z.coerce.number().min(1).optional(),
+    programme: z.string().optional(),
+  })
+  .refine(
+    (data) => data.placesIllimitees || (data.placesTotal !== undefined && data.placesTotal >= 1),
+    {
+      message: 'Indique un nombre de places, ou coche "illimité".',
       path: ["placesTotal"],
-    });
-  }
-});
+    }
+  )
+  .refine((data) => !data.estPayant || (data.prix !== undefined && data.prix > 0), {
+    message: "Indique un prix supérieur à 0 pour un événement payant.",
+    path: ["prix"],
+  });
 
-// 3. Type du formulaire dérivé du schema — c'est LA correction clé
 type FormValues = z.input<typeof schema>;
 
-interface EventFormProps {
-  initialData?: any;
-  onSubmit: (values: any) => Promise<void>;
+interface Props {
+  /** Fourni uniquement en mode édition */
+  existingEvent?: SerializedEvent;
 }
 
-export function EventForm({ initialData, onSubmit }: EventFormProps) {
-  const [loading, setLoading] = useState(false);
+export function EventForm({ existingEvent }: Props) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const [imageUrl, setImageUrl] = useState(existingEvent?.imageUrl ?? "");
+  const [imagePublicId, setImagePublicId] = useState(existingEvent?.imagePublicId ?? "");
 
   const {
     register,
     handleSubmit,
+    control,
     watch,
-    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema) as never,
-    defaultValues: initialData || {
-      titre: "",
-      slug: "",
-      descriptionCourte: "",
-      categorie: "",
-      lieu: "",
-      dateDebut: "",
-      statut: "a-venir",
-      isPayant: false,
-      prix: 0,
-      isIllimite: true,
-      placesTotal: 0,
-    },
+    defaultValues: existingEvent
+      ? {
+          titre: existingEvent.titre,
+          categorie: existingEvent.categorie,
+          descriptionCourte: existingEvent.descriptionCourte,
+          description: existingEvent.description,
+          lieu: existingEvent.lieu,
+          dateDebut: new Date(existingEvent.dateDebut).toISOString().slice(0, 16),
+          dateFin: new Date(existingEvent.dateFin).toISOString().slice(0, 16),
+          estPayant: existingEvent.prix > 0,
+          prix: existingEvent.prix,
+          placesIllimitees: existingEvent.placesTotal === null,
+          placesTotal: existingEvent.placesTotal ?? undefined,
+          programme: existingEvent.programme ?? "",
+        }
+      : { estPayant: false, prix: 0, placesIllimitees: false },
   });
 
-  const isPayant = watch("isPayant");
-  const isIllimite = watch("isIllimite");
+  const placesIllimitees = watch("placesIllimitees");
+  const estPayant = watch("estPayant");
 
-  // 4. Le paramètre reprend maintenant FormValues (dérivé du schema), pas EventFormValues
-  const handleFormSubmit = async (values: FormValues) => {
-    setLoading(true);
+  async function onSubmit(values: FormValues) {
+    if (!imageUrl) {
+      toast.error("Merci d'ajouter une image de couverture.");
+      return;
+    }
+    if (!user) {
+      toast.error("Session expirée, merci de vous reconnecter.");
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      const finalData = {
-        ...values,
-        prix: values.isPayant ? Number(values.prix) : 0,
-        placesTotal: values.isIllimite ? null : Number(values.placesTotal),
-        placesRestantes: values.isIllimite ? null : Number(values.placesTotal),
+      const payload = {
+        titre: values.titre!,
+        categorie: values.categorie!,
+        descriptionCourte: values.descriptionCourte!,
+        description: values.description!,
+        lieu: values.lieu!,
+        dateDebut: new Date(values.dateDebut!),
+        dateFin: new Date(values.dateFin!),
+        prix: values.estPayant ? Number(values.prix) : 0,
+        placesTotal: values.placesIllimitees ? null : Number(values.placesTotal),
+        imageUrl,
+        imagePublicId,
+        programme: values.programme,
+        createdBy: user.uid,
       };
-      await onSubmit(finalData);
+
+      if (existingEvent) {
+        await updateEvent(existingEvent.id, payload);
+        toast.success("Événement mis à jour !");
+      } else {
+        await createEvent(payload);
+        toast.success("Événement créé et publié !");
+      }
+
+      router.push("/admin/evenements");
+      router.refresh();
     } catch (error) {
       console.error(error);
+      toast.error("Une erreur est survenue lors de l'enregistrement.");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
-  };
+  }
+
+  function onInvalid(formErrors: Record<string, unknown>) {
+    console.error("Erreurs de validation :", formErrors);
+    toast.error("Certains champs sont invalides ou manquants. Vérifie le formulaire.");
+  }
 
   return (
     <form
-      onSubmit={handleSubmit(handleFormSubmit)}
-      className="space-y-8 rounded-3xl bg-white/70 border border-white p-6 sm:p-8 shadow-[0_10px_30px_rgba(0,0,0,0.03)] backdrop-blur-xl animate-fade-in"
+      onSubmit={handleSubmit(onSubmit, onInvalid)}
+      className="grid grid-cols-1 gap-8 lg:grid-cols-3"
     >
-      {/* SECTION 1 : INFORMATIONS GÉNÉRALES */}
-      <div className="space-y-5">
-        <h3 className="flex items-center gap-2 font-display text-sm font-black uppercase tracking-wider text-slate-400">
-          <FileText size={16} /> Informations de base
-        </h3>
-        
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          <Input
-            label="Titre de l'événement"
-            placeholder="Ex: Séminaire National de "
-            {...register("titre")}
-            error={errors.titre?.message}
-          />
-          <Input
-            label="Slug (URL unique)"
-            placeholder="ex: seminaire-cyber-2026"
-            {...register("slug")}
-            error={errors.slug?.message}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Input
-            label="Catégorie"
-            placeholder="Ex: Conférence, Formation..."
-            {...register("categorie")}
-            error={errors.categorie?.message}
-          />
-          <Input
-            label="Lieu ou Lien (Si virtuel)"
-            placeholder="Ex: Cotonou, Bénin ou Zoom"
-            {...register("lieu")}
-            error={errors.lieu?.message}
-          />
-        </div>
+      <div className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm lg:col-span-2">
+        <Input label="Titre de l'événement" {...register("titre")} error={errors.titre?.message} />
 
         <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Description courte</label>
-          <textarea
-            rows={3}
-            placeholder="Présentation rapide de l'événement qui apparaîtra sur les cartes..."
-            {...register("descriptionCourte")}
-            className={cn(
-              "w-full rounded-2xl border border-slate-200/80 bg-white/50 p-4 text-sm font-medium text-slate-800 placeholder-slate-400 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.01)] transition-all focus:border-primary/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/10",
-              errors.descriptionCourte && "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
-            )}
-          />
-          {errors.descriptionCourte && (
-            <p className="mt-1.5 text-xs font-semibold text-rose-500">{errors.descriptionCourte.message}</p>
+          <label className="text-sm font-medium text-ink">Type d&apos;événement</label>
+          <select
+            {...register("categorie")}
+            className="mt-1.5 w-full rounded-lg border border-muted/30 bg-white px-4 py-2.5 text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            defaultValue=""
+          >
+            <option value="" disabled>
+              Choisir un type...
+            </option>
+            {EVENT_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+          {errors.categorie && (
+            <p className="mt-1 text-sm text-red-600">{errors.categorie.message}</p>
           )}
         </div>
+
+        <Textarea
+          label="Description courte (affichée sur les cartes)"
+          {...register("descriptionCourte")}
+          error={errors.descriptionCourte?.message}
+        />
+        <Textarea
+          label="Description complète"
+          rows={6}
+          {...register("description")}
+          error={errors.description?.message}
+        />
+        <Textarea label="Programme (optionnel)" rows={4} {...register("programme")} />
       </div>
 
-      <hr className="border-slate-100" />
+      <div className="flex flex-col gap-4">
+        {/* Image de couverture */}
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <label className="text-sm font-medium text-ink">Affiche / image de couverture</label>
+          {imageUrl ? (
+            <div className="relative mt-2">
+              <img src={imageUrl} alt="Aperçu" className="h-40 w-full rounded-lg object-cover" />
+              <button
+                type="button"
+                onClick={() => {
+                  setImageUrl("");
+                  setImagePublicId("");
+                }}
+                className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-red-600 hover:bg-white"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ) : (
+            <CldUploadWidget
+              uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET}
+              onSuccess={(result) => {
+                if (typeof result.info === "object" && result.info) {
+                  setImageUrl(result.info.secure_url);
+                  setImagePublicId(result.info.public_id);
+                }
+              }}
+            >
+              {({ open }) => (
+                <button
+                  type="button"
+                  onClick={() => open()}
+                  className="mt-2 flex w-full flex-col items-center gap-2 rounded-lg border-2 border-dashed border-muted/30 p-8 text-muted transition-colors hover:border-primary hover:text-primary"
+                >
+                  <ImagePlus size={24} />
+                  <span className="text-sm">Choisir une image</span>
+                </button>
+              )}
+            </CldUploadWidget>
+          )}
+        </div>
 
-      {/* SECTION 2 : PLANIFICATION & LOGISTIQUE */}
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-        <div className="space-y-5">
-          <h3 className="flex items-center gap-2 font-display text-sm font-black uppercase tracking-wider text-slate-400">
-            <Calendar size={16} /> Planification
-          </h3>
+        {/* Lieu et dates */}
+        <div className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm">
+          <Input label="Lieu" {...register("lieu")} error={errors.lieu?.message} />
           <Input
-            label="Date et Heure de début"
+            label="Date et heure de début"
             type="datetime-local"
             {...register("dateDebut")}
             error={errors.dateDebut?.message}
           />
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Statut initial</label>
-            <select
-              {...register("statut")}
-              className="w-full h-11 rounded-xl border border-slate-200 bg-white/50 px-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-primary/40"
-            >
-              <option value="a-venir">À venir</option>
-              <option value="en-cours">En cours</option>
-              <option value="passe">Terminé / Archivé</option>
-            </select>
-          </div>
+          <Input
+            label="Date et heure de fin"
+            type="datetime-local"
+            {...register("dateFin")}
+            error={errors.dateFin?.message}
+          />
         </div>
 
-        <div className="space-y-5">
-          <h3 className="flex items-center gap-2 font-display text-sm font-black uppercase tracking-wider text-slate-400">
-            <Users size={16} /> Capacité d&apos;accueil
-          </h3>
-
-          <label className="group flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-4 cursor-pointer transition-all hover:bg-slate-50 shadow-[inset_2px_2px_6px_rgba(0,0,0,0.01)]">
-            <div className="space-y-0.5">
-              <span className="text-sm font-bold text-slate-900">Places de réservation illimitées</span>
-              <p className="text-xs text-slate-400 font-medium">Aucune jauge restrictive sur cet événement</p>
-            </div>
-            <input
-              type="checkbox"
-              {...register("isIllimite")}
-              className="sr-only peer"
+        {/* Mode gratuit / payant */}
+        <div className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm">
+          <label className="text-sm font-medium text-ink">Mode de participation</label>
+          <div className="flex gap-2">
+            <Controller
+              name="estPayant"
+              control={control}
+              render={({ field }) => (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => field.onChange(false)}
+                    className={`flex-1 rounded-lg border-2 px-4 py-2.5 text-sm font-semibold transition-colors ${
+                      !field.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-muted/20 text-muted"
+                    }`}
+                  >
+                    Gratuit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => field.onChange(true)}
+                    className={`flex-1 rounded-lg border-2 px-4 py-2.5 text-sm font-semibold transition-colors ${
+                      field.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-muted/20 text-muted"
+                    }`}
+                  >
+                    Payant
+                  </button>
+                </>
+              )}
             />
-            <div className="relative h-6 w-11 shrink-0 rounded-full bg-slate-200 transition-colors after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow-sm after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full" />
-          </label>
+          </div>
 
-          {!isIllimite && (
-            <div className="animate-fade-in">
-              <Input
-                label="Nombre maximal de places disponibles"
-                type="number"
-                placeholder="Ex: 150"
-                {...register("placesTotal")}
-                error={errors.placesTotal?.message}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-
-      <hr className="border-slate-100" />
-
-      {/* SECTION 3 : FINANCES */}
-      <div className="space-y-5">
-        <h3 className="flex items-center gap-2 font-display text-sm font-black uppercase tracking-wider text-slate-400">
-          <Coins size={16} /> Configuration d&apos;accès financier
-        </h3>
-
-        <div className="p-1 rounded-2xl bg-slate-100/80 border border-slate-200/30 grid grid-cols-2 w-full sm:w-80 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.05)]">
-          <button
-            type="button"
-            onClick={() => setValue("isPayant", false)}
-            className={cn(
-              "py-2.5 text-xs font-extrabold rounded-xl uppercase tracking-wider transition-all",
-              !isPayant
-                ? "bg-white text-slate-900 shadow-sm border border-slate-100"
-                : "text-slate-500 hover:text-slate-800"
-            )}
-          >
-            Gratuit
-          </button>
-          <button
-            type="button"
-            onClick={() => setValue("isPayant", true)}
-            className={cn(
-              "py-2.5 text-xs font-extrabold rounded-xl uppercase tracking-wider transition-all",
-              isPayant
-                ? "bg-white text-primary shadow-sm border border-slate-100"
-                : "text-slate-500 hover:text-slate-800"
-            )}
-          >
-            Accès Payant
-          </button>
-        </div>
-
-        {isPayant && (
-          <div className="w-full sm:w-80 animate-fade-in">
+          {estPayant && (
             <Input
-              label="Montant du ticket (FCFA)"
+              label="Prix par place (FCFA)"
               type="number"
-              placeholder="Ex: 5000"
+              min={1}
               {...register("prix")}
               error={errors.prix?.message}
             />
-          </div>
-        )}
-      </div>
-
-      {/* FOOTER ACTION */}
-      <div className="pt-4 border-t border-slate-100 flex justify-end">
-        <Button
-          type="submit"
-          variant="accent"
-          size="lg"
-          disabled={loading}
-          className="w-full sm:w-auto h-12 px-8 shadow-md rounded-xl transition-all hover:scale-[1.01]"
-        >
-          {loading ? (
-            <span className="flex items-center gap-2 justify-center">
-              <Loader2 className="animate-spin" size={16} /> Publication en cours...
-            </span>
-          ) : (
-            <span className="flex items-center gap-2 justify-center">
-              <Check size={16} /> {initialData ? "Sauvegarder les modifications" : "Publier l'événement"}
-            </span>
           )}
+        </div>
+
+        {/* Places */}
+        <div className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm">
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <Controller
+              name="placesIllimitees"
+              control={control}
+              render={({ field }) => (
+                <input
+                  type="checkbox"
+                  checked={field.value}
+                  onChange={(e) => field.onChange(e.target.checked)}
+                  className="h-4 w-4 rounded border-muted/30 text-primary focus:ring-primary/30"
+                />
+              )}
+            />
+            Nombre de places illimité
+          </label>
+
+          {!placesIllimitees && (
+            <Input
+              label="Nombre total de places attendues"
+              type="number"
+              min={1}
+              {...register("placesTotal")}
+              error={errors.placesTotal?.message}
+            />
+          )}
+        </div>
+
+        <Button type="submit" variant="accent" size="lg" disabled={submitting} className="w-full">
+          {submitting
+            ? "Enregistrement..."
+            : existingEvent
+            ? "Enregistrer les modifications"
+            : "Créer et publier l'événement"}
         </Button>
       </div>
     </form>
