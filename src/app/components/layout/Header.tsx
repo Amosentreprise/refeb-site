@@ -44,8 +44,8 @@ export function Header() {
           <Image 
             src="/images/logo-refeb.png" // Assure-toi que c'est un .png transparent
             alt="Logo REFEB" 
-            width={120} 
-            height={40} 
+            width={60} 
+            height={30} 
             className="h-auto w-auto brightness-0 invert"
           />
         </Link>
@@ -107,7 +107,7 @@ export function Header() {
             onClick={() => setIsMenuOpen(false)}
             className="rounded-full bg-[#e1a924] px-10 py-5 text-[#0b2240] mt-6 text-lg font-black"
           >
-            S'inscrire à un événement
+            S'inscrire 
           </Link>
         </div>
       </div>

@@ -42,26 +42,39 @@ export default function EvenementsPage() {
       <Header />
       <main className="min-h-screen bg-bg">
         
+       
         {/* HERO BANNER INSTITUTIONNEL */}
-        <section className="relative bg-primary-dark py-36 text-white overflow-hidden">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:32px_32px]" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] pointer-events-none" />
-          
-          <div className="relative mx-auto max-w-4xl px-6 text-center lg:px-8">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/5 border border-white/10 px-4 py-1.5 backdrop-blur-sm">
-              <CalendarDays size={14} className="text-accent" />
-              <p className="text-xs font-semibold tracking-[0.2em] text-accent uppercase">
-                Agenda Officiel
-              </p>
-            </div>
-            <h1 className="mt-6 font-display text-4xl font-bold tracking-tight sm:text-6xl text-white">
-              Événements & Rencontres
-            </h1>
-            <p className="mt-6 text-lg text-white/80 max-w-2xl mx-auto leading-relaxed">
-              Retrouvez l&apos;ensemble de nos rassemblements, séminaires de formation et conférences. Réservez votre place et participez à la dynamique du réseau au Bénin.
-            </p>
-          </div>
-        </section>
+<section 
+  className="relative py-36 text-white overflow-hidden"
+  style={{
+    background: `
+      linear-gradient(to right, rgba(11, 34, 64, 0.4), rgba(11, 34, 64, 0.4)), 
+      radial-gradient(circle at center, rgba(17, 50, 93, 0.4) 0%, rgba(11, 34, 64, 1) 70%),
+      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      #0b2240
+    `,
+    backgroundSize: '100% 100%, 100% 100%, 42px 42px, 42px 42px'
+  }}
+>
+  {/* L'effet de lumière circulaire est conservé pour plus de profondeur */}
+  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] pointer-events-none" />
+  
+  <div className="relative mx-auto max-w-4xl px-6 text-center lg:px-8">
+    <div className="inline-flex items-center gap-2 rounded-full bg-white/5 border border-white/10 px-4 py-1.5 backdrop-blur-sm">
+      <CalendarDays size={14} className="text-accent" />
+      <p className="text-xs font-semibold tracking-[0.2em] text-accent uppercase">
+        Agenda Officiel
+      </p>
+    </div>
+    <h1 className="mt-6 font-display text-4xl font-bold tracking-tight sm:text-6xl text-white">
+      Événements & Rencontres
+    </h1>
+    <p className="mt-6 text-lg text-white/80 max-w-2xl mx-auto leading-relaxed">
+      Retrouvez l&apos;ensemble de nos rassemblements, séminaires de formation et conférences. Réservez votre place et participez à la dynamique du réseau au Bénin.
+    </p>
+  </div>
+</section>
 
         {/* SECTION FILTRES ET AGENDA */}
         <section className="relative py-24 px-6 lg:px-8 -mt-10 z-10">

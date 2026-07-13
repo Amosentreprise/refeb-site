@@ -25,10 +25,12 @@ export function EventFilter({ active, onChange }: Props) {
           key={f.value}
           onClick={() => onChange(f.value)}
           className={cn( 
-            "rounded-full px-5 py-2 text-sm font-semibold transition-colors",
+            "rounded-full px-5 py-2 text-sm font-semibold transition-all duration-300",
+            // État ACTIF : Bleu foncé (#002D62) et texte blanc
             active === f.value
-              ? "bg-primary text-white"
-              : "bg-white text-muted hover:bg-primary/10 hover:text-primary"
+              ? "bg-[#002D62] text-white shadow-md"
+              // État INACTIF : Fond très clair (#F3EFE4) et texte bleu foncé (#002D62)
+              : "bg-[#F3EFE4] text-[#002D62] hover:bg-[#E2DCC9]"
           )}
         >
           {f.label}
