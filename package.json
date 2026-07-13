@@ -34,7 +34,14 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
     "typewriter-effect": "^2.22.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3" 
+
+  },
+      "overrides": {
+    "jose": "^5.9.6"
+  },
+  "resolutions": {
+    "jose": "^5.9.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
