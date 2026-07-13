@@ -1,20 +1,41 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { CalendarDays, Sparkles } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { CalendarDays, Sparkles, Loader2 } from "lucide-react";
 import { Header } from "../components/layout/Header";
 import { Footer } from "../components/layout/Footer";
 import { EventCard } from "../components/evenements/EventCard";
 import { EventFilter, type EventFilterValue } from "../components/evenements/EventFilter";
-import { demoEvents } from "@/lib/demo-data";
+import { getAllEvents } from "@/lib/firebase/events";
+import { toast } from "sonner";
+import type { EventDoc } from "@/types";
 
 export default function EvenementsPage() {
   const [filter, setFilter] = useState<EventFilterValue>("tous");
+  const [events, setEvents] = useState<EventDoc[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  // Récupération des vrais événements depuis Firestore au chargement
+  useEffect(() => {
+    async function fetchEvents() {
+      try {
+        const realEvents = await getAllEvents();
+        setEvents(realEvents);
+      } catch (error) {
+        console.error("Erreur lors du chargement des événements:", error);
+        toast.error("Impossible de récupérer l'agenda. Veuillez réessayer.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchEvents();
+  }, []);
+
+  // Filtrage basé sur les données réelles de Firestore
   const filteredEvents = useMemo(() => {
-    if (filter === "tous") return demoEvents;
-    return demoEvents.filter((e) => e.statut === filter);
-  }, [filter]);
+    if (filter === "tous") return events;
+    return events.filter((e) => e.statut === filter);
+  }, [filter, events]);
 
   return (
     <>
@@ -23,7 +44,6 @@ export default function EvenementsPage() {
         
         {/* HERO BANNER INSTITUTIONNEL */}
         <section className="relative bg-primary-dark py-36 text-white overflow-hidden">
-          {/* Filigrane géométrique */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:32px_32px]" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] pointer-events-none" />
           
@@ -56,8 +76,13 @@ export default function EvenementsPage() {
               <EventFilter active={filter} onChange={setFilter} />
             </div>
 
-            {/* CONTENU COMPACT OU GRILLE */}
-            {filteredEvents.length === 0 ? (
+            {/* GESTION DE L'ÉTAT DE CHARGEMENT OU DU CONTENU */}
+            {loading ? (
+              <div className="py-20 flex flex-col items-center justify-center gap-3">
+                <Loader2 className="animate-spin text-primary" size={40} />
+                <p className="text-sm text-muted font-medium">Chargement de l'agenda en temps réel...</p>
+              </div>
+            ) : filteredEvents.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-primary/20 bg-white p-16 text-center">
                 <CalendarDays size={40} className="mx-auto text-muted/40 mb-4" />
                 <p className="text-base font-medium text-muted">

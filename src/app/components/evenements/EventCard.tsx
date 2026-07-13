@@ -1,11 +1,13 @@
+
+import { EventStatusBadge } from "../../components/ui/Badge";
 import Link from "next/link";
 import { CalendarDays, MapPin, Users } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { EventStatusBadge } from "../../components/ui/Badge";
-import type { DemoEvent } from "@/lib/demo-data";
 
-export function EventCard({ event }: { event: DemoEvent }) {
+import type { EventDoc } from "@/types";
+
+export function EventCard({ event }: { event: EventDoc }) {
   const placesInfo =
     event.placesTotal !== null
       ? `${event.placesRestantes} places restantes / ${event.placesTotal}`
@@ -13,7 +15,7 @@ export function EventCard({ event }: { event: DemoEvent }) {
 
   return (
     <Link
-      href={`components/evenements/${event.slug}`}
+      href={`/evenements/${event.slug}`}
       className="group flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm transition-shadow hover:shadow-lg"
     >
       <div
@@ -21,7 +23,12 @@ export function EventCard({ event }: { event: DemoEvent }) {
         style={{ backgroundImage: `url('${event.imageUrl}')` }}
       />
       <div className="flex flex-1 flex-col p-6">
-        <EventStatusBadge status={event.statut} />
+        <div className="flex flex-wrap items-center gap-2">
+          <EventStatusBadge status={event.statut} />
+          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            {event.categorie}
+          </span>
+        </div>
         <h3 className="mt-3 font-display text-lg font-semibold text-primary">
           {event.titre}
         </h3>
@@ -35,7 +42,7 @@ export function EventCard({ event }: { event: DemoEvent }) {
           </span>
           <span className="flex items-center gap-2">
             <MapPin size={16} />
-            {event.lieu} 
+            {event.lieu}
           </span>
           {event.statut !== "passe" && (
             <span className="flex items-center gap-2">

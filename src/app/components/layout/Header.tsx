@@ -1,339 +1,117 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
-import {
-  Menu,
-  X,
-  ArrowUpRight,
-  History,
-  Layers,
-  Calendar,
-  Newspaper,
-  Image as ImageIcon,
-  Mail,
-  Home,
-} from "lucide-react";
-import { cn } from "../../../lib/utils";
-
-const navLinks = [
-  { href: "/", label: "Accueil", icon: Home },
-  { href: "/historique", label: "Historique", icon: History },
-  { href: "/activites", label: "Activités", icon: Layers },
-  { href: "/evenements", label: "Événements", icon: Calendar },
-  { href: "/actualites", label: "Actualités", icon: Newspaper },
-  { href: "/galerie", label: "Galerie", icon: ImageIcon },
-  { href: "/contact", label: "Contact", icon: Mail },
-];
+import { Menu, X } from "lucide-react"; // Import des icônes Lucide
 
 export function Header() {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // État pour gérer l'ouverture du menu mobile
   const pathname = usePathname();
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 15);
-
-    window.addEventListener("scroll", onScroll);
-
-    return () => window.removeEventListener("scroll", onScroll);
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const isActive = (path: string) => pathname === path;
+
+  // Données du menu pour simplifier le rendu
+  const navLinks = [
+    { href: "/", label: "Accueil" },
+    { href: "/historique", label: "Histoire" },
+    { href: "/activites", label: "Activités" },
+    { href: "/evenements", label: "Événements" },
+    { href: "/galerie", label: "Galerie" },
+    { href: "/contact", label: "Contact" },
+  ];
+
   return (
-    <div className="fixed top-4 left-0 right-0 z-50 px-4 sm:px-6 lg:px-12 pointer-events-none">
+    <header 
+      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+        isScrolled ? "py-4 bg-[#0b2240]/90 backdrop-blur-md shadow-lg" : "py-6 bg-transparent"
+      }`}
+    >
+      <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 lg:px-8">
+        
+        {/* LOGO (Visible tout le temps) */}
+        <Link href="/" className="relative z-10">
+          <Image 
+            src="/images/logo-refeb.png" // Assure-toi que c'est un .png transparent
+            alt="Logo REFEB" 
+            width={120} 
+            height={40} 
+            className="h-auto w-auto brightness-0 invert"
+          />
+        </Link>
 
-      <header
-        className={cn(
-          "animate-header-float relative mx-auto max-w-7xl w-full rounded-full border border-primary/10 bg-white/80 backdrop-blur-xl transition-all duration-300 pointer-events-auto",
-          scrolled
-            ? "shadow-xl shadow-accent/10 bg-white/95"
-            : "shadow-lg"
-        )}
-      >
-
-        {/* Glow */}
-        <div
-          className="
-          absolute
-          inset-[-2px]
-          rounded-full
-          bg-gradient-to-r
-          from-transparent
-          via-accent/50
-          to-transparent
-          opacity-60
-          animate-header-glow
-          pointer-events-none
-          "
-        />
-
-
-        <div className="relative z-10">
-
-          <div className="flex items-center justify-between p-2 pl-5 sm:pl-8">
-
-
-            {/* LOGO */}
-            <Link
-              href="/"
-              className="group relative flex items-center"
+        {/* NAVIGATION DESKTOP (Masquée sur mobile) */}
+        <div className="hidden lg:flex items-center gap-x-8 text-sm font-bold uppercase tracking-wider">
+          {navLinks.map((link) => (
+            <Link 
+              key={link.href}
+              href={link.href} 
+              className={`${isActive(link.href) ? "text-[#e1a924]" : "text-white"} hover:text-[#e1a924] transition-colors`}
             >
-
-              <span
-                className="
-                absolute
-                inset-0
-                rounded-full
-                bg-accent/30
-                blur-xl
-                opacity-0
-                transition-opacity
-                duration-500
-                group-hover:opacity-100
-                "
-              />
-
-              <Image
-                src="/images/logo-refeb.png"
-                alt="Logo REFEB"
-                width={110}
-                height={35}
-                priority
-                className="
-                relative
-                z-10
-                h-auto
-                w-[90px]
-                object-contain
-                transition-transform
-                duration-500
-                group-hover:scale-105
-                "
-              />
-
+              {link.label}
             </Link>
-
-
-
-            {/* MENU DESKTOP */}
-            <nav className="hidden items-center gap-1.5 rounded-full bg-bg-alt/60 p-1 border border-primary/5 lg:flex">
-
-              {navLinks.map((link) => {
-
-                const LinkIcon = link.icon;
-                const isActive = pathname === link.href;
-
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={cn(
-                      "relative flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold tracking-wide transition-all duration-300",
-                      isActive
-                        ? "bg-white text-primary shadow-sm border border-primary/5"
-                        : "text-muted hover:text-primary hover:bg-white/80"
-                    )}
-                  >
-
-                    <LinkIcon
-                      size={14}
-                      className={cn(
-                        "transition-transform",
-                        isActive && "scale-110 text-accent-dark"
-                      )}
-                    />
-
-                    {link.label}
-
-                  </Link>
-                );
-              })}
-
-            </nav>
-
-
-
-            {/* BOUTON */}
-            <div className="hidden lg:block">
-
-              <Link
-                href="/evenements"
-                className="
-                group
-                inline-flex
-                items-center
-                gap-3
-                rounded-full
-                bg-accent
-                p-1.5
-                pl-5
-                pr-2.5
-                text-xs
-                font-bold
-                text-primary
-                shadow-sm
-                transition-all
-                hover:bg-accent/90
-                "
-              >
-
-                S'inscrire à un événement
-
-                <span
-                  className="
-                  flex
-                  h-7
-                  w-7
-                  items-center
-                  justify-center
-                  rounded-full
-                  bg-primary
-                  text-white
-                  transition-all
-                  group-hover:rotate-45
-                  "
-                >
-                  <ArrowUpRight size={14}/>
-                </span>
-
-              </Link>
-
-            </div>
-
-
-
-            {/* MENU MOBILE */}
-            <button
-              className="
-              p-3
-              mr-1
-              lg:hidden
-              rounded-full
-              hover:bg-bg-alt
-              transition-colors
-              text-primary
-              "
-              onClick={() => setMobileOpen(!mobileOpen)}
-              aria-label="Menu"
-            >
-
-              {mobileOpen
-                ? <X size={20}/>
-                : <Menu size={20}/>
-              }
-
-            </button>
-
-
-          </div>
-
-
-
-          {/* MENU MOBILE DROPDOWN */}
-
-          <div
-            className={cn(
-              "absolute left-0 right-0 top-full mt-3 lg:hidden transition-all duration-300",
-              mobileOpen
-                ? "opacity-100 translate-y-0 visible"
-                : "opacity-0 -translate-y-3 invisible pointer-events-none"
-            )}
+          ))}
+          
+          {/* BOUTON INSCRIPTION DESKTOP */}
+          <Link 
+            href="/evenements" 
+            className="rounded-full bg-[#e1a924] px-6 py-2.5 text-[#0b2240] transition-transform hover:scale-105"
           >
-
-            <nav
-              className="
-              mx-2
-              rounded-2xl
-              bg-white
-              p-3
-              border
-              border-primary/10
-              shadow-xl
-              flex
-              flex-col
-              gap-1.5
-              "
-            >
-
-              {navLinks.map((link)=>{
-
-                const LinkIcon = link.icon;
-                const isActive = pathname === link.href;
-
-
-                return (
-
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={()=>setMobileOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all",
-                      isActive
-                        ? "bg-primary text-white"
-                        : "text-muted hover:bg-bg-alt hover:text-primary"
-                    )}
-                  >
-
-                    <LinkIcon
-                      size={16}
-                      className={
-                        isActive
-                        ? "text-accent"
-                        : "text-muted/60"
-                      }
-                    />
-
-                    {link.label}
-
-                  </Link>
-
-                );
-
-              })}
-
-
-
-              <Link
-                href="/evenements"
-                onClick={()=>setMobileOpen(false)}
-                className="
-                mt-3
-                flex
-                w-full
-                items-center
-                justify-between
-                rounded-xl
-                bg-accent
-                px-5
-                py-3.5
-                text-sm
-                font-bold
-                text-primary
-                shadow-sm
-                hover:bg-accent/90
-                "
-              >
-
-                S'inscrire à un événement
-
-                <ArrowUpRight size={16}/>
-
-              </Link>
-
-
-            </nav>
-
-          </div>
-
-
+            S'inscrire
+          </Link>
         </div>
 
+        {/* BOUTON MENU HAMBURGER (Mobile uniquement) */}
+        <button 
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          aria-label={isMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+          className="lg:hidden relative z-50 text-white focus:outline-none p-2"
+        >
+          {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+        </button>
 
-      </header>
+      </nav>
 
-    </div>
+      {/* PANNEAU DE NAVIGATION MOBILE ( plein écran ) */}
+      <div 
+        className={`fixed inset-0 z-40 bg-[#0b2240]/95 backdrop-blur-lg transition-transform duration-500 ease-in-out lg:hidden ${
+          isMenuOpen ? "translate-y-0" : "-translate-y-full"
+        }`}
+        style={{ height: '100dvh' }} // Hauteur dynamique tenant compte des barres de navigateur
+      >
+        <div className="flex flex-col items-center justify-center h-full gap-y-10 text-center font-bold uppercase tracking-wider text-2xl pb-20">
+          {navLinks.map((link) => (
+            <Link 
+              key={link.href}
+              href={link.href} 
+              onClick={() => setIsMenuOpen(false)} // Ferme le menu au clic
+              className={`${isActive(link.href) ? "text-[#e1a924]" : "text-white"} transition-colors duration-300 hover:text-[#e1a924]`}
+            >
+              {link.label}
+            </Link>
+          ))}
+          
+          {/* BOUTON INSCRIPTION MOBILE (Dans le menu) */}
+          <Link 
+            href="/evenements" 
+            onClick={() => setIsMenuOpen(false)}
+            className="rounded-full bg-[#e1a924] px-10 py-5 text-[#0b2240] mt-6 text-lg font-black"
+          >
+            S'inscrire à un événement
+          </Link>
+        </div>
+      </div>
+
+    </header>
   );
 }

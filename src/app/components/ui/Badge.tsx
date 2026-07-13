@@ -26,18 +26,21 @@ const eventStatusConfig: Record<EventStatus, { label: string; classes: string }>
 };
 
 export function EventStatusBadge({ status }: { status: EventStatus }) {
-  const config = eventStatusConfig[status];
+  const config = eventStatusConfig[status] || { label: status || "Inconnu", classes: "bg-muted/10 text-muted" };
   return <Badge className={config.classes}>{config.label}</Badge>;
 }
 
-const paymentStatusConfig: Record<PaymentStatus, { label: string; classes: string }> = {
+const paymentStatusConfig: Record<string, { label: string; classes: string }> = {
   "paye": { label: "Payé", classes: "bg-green-100 text-green-700" },
+  "success": { label: "Payé", classes: "bg-green-100 text-green-700" },
   "en-attente": { label: "En attente", classes: "bg-accent/15 text-accent-dark" },
   "gratuit": { label: "Gratuit", classes: "bg-primary/10 text-primary" },
   "annule": { label: "Annulé", classes: "bg-red-100 text-red-700" },
 };
 
-export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
-  const config = paymentStatusConfig[status];
+export function PaymentStatusBadge({ status }: { status: string }) {
+  const normalizedStatus = (status || "").toLowerCase();
+  const config = paymentStatusConfig[normalizedStatus] || paymentStatusConfig["en-attente"];
+
   return <Badge className={config.classes}>{config.label}</Badge>;
 }

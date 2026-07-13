@@ -24,7 +24,7 @@ export function EventFilter({ active, onChange }: Props) {
         <button
           key={f.value}
           onClick={() => onChange(f.value)}
-          className={cn(
+          className={cn( 
             "rounded-full px-5 py-2 text-sm font-semibold transition-colors",
             active === f.value
               ? "bg-primary text-white"

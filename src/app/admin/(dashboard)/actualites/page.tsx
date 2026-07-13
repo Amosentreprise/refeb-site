@@ -5,6 +5,7 @@ import { fr } from "date-fns/locale";
 import { Button } from "../../../components/ui/Button";
 import { demoArticles } from "@/lib/demo-data";
 
+
 export default function AdminActualitesPage() {
   return (
     <div>
@@ -21,7 +22,8 @@ export default function AdminActualitesPage() {
       </div>
 
       <div className="mt-8 overflow-hidden rounded-2xl bg-white shadow-sm">
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[560px] text-left text-sm">
           <thead>
             <tr className="border-b border-muted/10 bg-bg-alt/50 text-muted">
               <th className="px-6 py-4 font-medium">Titre</th>
@@ -50,6 +52,7 @@ export default function AdminActualitesPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

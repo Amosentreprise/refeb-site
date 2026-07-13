@@ -3,6 +3,26 @@ import type { Timestamp } from "firebase/firestore";
 /** Statut de cycle de vie d'un événement, dérivé des dates mais aussi forçable manuellement */
 export type EventStatus = "a-venir" | "en-cours" | "passe";
 
+/**
+ * Types d'événements organisés par le REFEB — calés sur ses activités réelles.
+ * "Autre" couvre tout événement ponctuel qui ne rentre pas dans ces catégories.
+ */
+export const EVENT_CATEGORIES = [
+  "Cours bibliques par correspondance",
+  "Conférence pédagogique",
+  "Conférence biblique",
+  "Animation pédagogique mensuelle",
+  "Semaine d'évangélisation des collègues",
+  "Séminaire de formation",
+  "Camp de formation pour apprenants",
+  "Université de vacances",
+  "Formation certificative en éducation chrétienne",
+  "Assemblée générale",
+  "Autre",
+] as const;
+
+export type EventCategory = (typeof EVENT_CATEGORIES)[number];
+
 /** Statut de paiement d'une inscription */
 export type PaymentStatus = "en-attente" | "paye" | "gratuit" | "annule";
 
@@ -16,6 +36,7 @@ export interface EventDoc {
   id: string;
   titre: string;
   slug: string;
+  categorie: EventCategory; 
   description: string;
   descriptionCourte: string;
   lieu: string;
