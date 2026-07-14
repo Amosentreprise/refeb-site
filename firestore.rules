@@ -32,14 +32,10 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    match /gallery/{albumId} {
+    // Galerie : lecture publique, écriture réservée aux admins
+    match /galleryImages/{imageId} {
       allow read: if true;
       allow write: if isAdmin();
-
-      match /images/{imageId} {
-        allow read: if true;
-        allow write: if isAdmin();
-      }
     }
 
     match /adminUsers/{userId} {

@@ -1,46 +1,64 @@
-"use client";
 
 import { Header } from "../components/layout/Header";
 import { Footer } from "../components/layout/Footer";
 import { GalleryGrid } from "../components/galerie/GalleryGrid";
-import { demoGalleryImages } from "@/lib/demo-gallery";
 
-export default function GaleriePage() {
+import { getAllGalleryImages } from "@/lib/firebase/gallery";
+
+
+export const dynamic = "force-dynamic";
+
+export default async function GaleriePage() {
+  const images = await getAllGalleryImages();
+
+  // Le Timestamp Firestore (createdAt) est une instance de classe : on la
+  // convertit en chaîne avant de transmettre les données au Client Component.
+  const imagesForClient = images.map((image) => ({
+    ...image,
+    createdAt: image.createdAt?.toDate().toISOString() ?? null,
+  }));
+
   return (
-    <div className="min-h-screen bg-[#0b2240]">
+    <>
       <Header />
-      
-      {/* SECTION HÉROS AVEC LE FOND TECHNIQUE EXACT */}
-      <section 
-        className="relative pt-32 pb-24 px-6 text-center text-white"
-        style={{
-          background: `
-            linear-gradient(to right, rgba(11, 34, 64, 0.4), rgba(11, 34, 64, 0.4)), 
-            radial-gradient(circle at center, rgba(17, 50, 93, 0.4) 0%, rgba(11, 34, 64, 1) 70%),
-            linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-            #0b2240
-          `,
-          backgroundSize: '100% 100%, 100% 100%, 42px 42px, 42px 42px'
-        }}
-      >
-        <div className="relative z-10 max-w-4xl mx-auto">
-          <span className="text-[#e1a924] font-black tracking-[0.3em] uppercase text-xs">Témoignages en images</span>
-          <h1 className="mt-8 font-display text-5xl md:text-7xl font-black">Galerie Photos</h1>
-          <p className="mt-6 text-slate-300 text-lg max-w-xl mx-auto">
-            Revivez à travers nos archives les moments marquants, les rassemblements fraternels et les séminaires de formation du réseau au Bénin.
-          </p>
-        </div>
-      </section>
+      <main>
+        <section className="relative py-36 text-white overflow-hidden"
+  style={{
+    background: `
+      linear-gradient(to right, rgba(11, 34, 64, 0.4), rgba(11, 34, 64, 0.4)), 
+      radial-gradient(circle at center, rgba(17, 50, 93, 0.4) 0%, rgba(11, 34, 64, 1) 70%),
+      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      #0b2240
+    `,
+    backgroundSize: '100% 100%, 100% 100%, 42px 42px, 42px 42px'
+  }}>
+          <div className="mx-auto max-w-4xl px-6 text-center lg:px-8">
+            <p className="text-sm font-semibold tracking-[0.2em] text-accent uppercase">
+              En images
+            </p>
+            <h1 className="mt-3 font-display text-4xl font-bold sm:text-5xl">
+              Galerie
+            </h1>
+            <p className="mt-4 text-white/80">
+              Revivez les moments forts des événements et rencontres du réseau.
+            </p>
+          </div>
+        </section>
 
-      {/* SECTION CONTENU (FOND SLATE POUR LE CONTRASTE) */}
-      <section className="bg-slate-50 py-16 px-6">
-        <div className="max-w-7xl mx-auto">
-          <GalleryGrid images={demoGalleryImages} />
-        </div>
-      </section>
-      
+        <section className="bg-bg py-16">
+          <div className="mx-auto max-w-6xl px-6 lg:px-8">
+            {images.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-muted/30 bg-white p-10 text-center text-muted">
+                Aucune photo dans la galerie pour le moment.
+              </p>
+            ) : (
+              <GalleryGrid images={imagesForClient} />
+            )}
+          </div>
+        </section>
+      </main>
       <Footer />
-    </div>
+    </>
   );
 }
