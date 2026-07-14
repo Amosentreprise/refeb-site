@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 
 import { Geist, Geist_Mono } from "next/font/google";
+import { Montserrat } from 'next/font/google';
+
+const montserrat = Montserrat({ 
+  subsets: ['latin'], 
+  variable: '--font-montserrat' 
+});
 
 import "./globals.css";
 
@@ -64,7 +70,7 @@ export const metadata: Metadata = {
 
 
   metadataBase: new URL(
-    "https://www.refeb.bj"
+    "https://refeb.vercel.app/"
   ),
 
 
@@ -80,7 +86,7 @@ export const metadata: Metadata = {
     locale: "fr_FR",
 
     url:
-      "https://www.refeb.bj",
+      "https://refeb.vercel.app/",
 
     siteName:
       "REFEB - Réseau Évangélique des Frères Enseignants du Bénin",
@@ -105,6 +111,9 @@ export const metadata: Metadata = {
     description:
       "Découvrez la mission, la vision et les actions du Réseau Évangélique des Frères Enseignants du Bénin.",
 
+  },
+  icons: {
+    icon: '/images/logo-refeb.png', // Assure-toi que le chemin est correct
   },
 
 
@@ -196,7 +205,8 @@ export default function RootLayout({
 
       lang="fr"
 
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+     
+      className={`${montserrat.variable} h-full antialiased`}
 
     >
 

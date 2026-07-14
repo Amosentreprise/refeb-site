@@ -12,7 +12,7 @@
   --color-ink: #0B1520;
   --color-muted: #5A6573;
   --color-white: #FFFFFF;
-
+--font-montserrat: 'Montserrat', sans-serif;
   --font-display: var(--font-fraunces);
   --font-body: var(--font-inter);
 }
@@ -22,10 +22,10 @@
 body {
   background: var(--color-bg);
   color: var(--color-ink);
-  font-family: var(--font-body), sans-serif;
+  font-family: var(--font-montserrat);
 }
 
-h1, h2, h3, h4, .font-display { font-family: var(--font-display), serif; }
+h1, h2, h3, h4, .font-display { font-family: var(--font-montserrat); }
 
 /* --- UTILITAIRES & ANIMATIONS --- */
 
